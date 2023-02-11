@@ -2,7 +2,6 @@ package org.ml;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
 import static java.util.stream.Collectors.toCollection;
 
 public class DecisionTreeClassifier {
@@ -22,7 +21,7 @@ public class DecisionTreeClassifier {
         this.features = features;
         this.root = this.createTree(data, 0);
         System.out.println("Fit function finished! The root node is [" + this.features.get(this.root.getFeatureIndex()) + " < " + this.root.getValue() + "] with a Gini impurity of " + this.root.getGiniValue());
-        this.traverseTree(this.root, 0);
+        // this.traverseTree(this.root, 0);
     }
 
     private Node createTree(List<List<Double>> data, int depth) {
@@ -82,7 +81,7 @@ public class DecisionTreeClassifier {
         return this.getNumberOfPositiveSamples(data) >= this.getNumberOfNegativeSamples(data);
     }
 
-    public void holdoutEvaluation(List<List<Double>> testingData) {
+    public List<Double> holdoutEvaluation(List<List<Double>> testingData) {
         double trueNegatives = 0.0, truePositives = 0.0, falseNegatives = 0.0, falsePositives = 0.0;
 
         for (List<Double> patient : testingData) {
@@ -105,12 +104,12 @@ public class DecisionTreeClassifier {
         System.out.println("FP: " + falsePositives);
         System.out.println("FN: " + falseNegatives);
         double accuracy = Metrics.accuracy(truePositives, trueNegatives, falsePositives, falseNegatives);
-        System.out.println("Accuracy: " + accuracy);
-        System.out.println("Precision: " + Metrics.precision(truePositives, falsePositives));
-        System.out.println("Sensitivity/Recall/True Positive Rate: " + Metrics.sensitivity(truePositives, falseNegatives));
-        System.out.println("Specificity: " + Metrics.specificity(trueNegatives, falsePositives));
-        System.out.println("F1 score: " + Metrics.f1Score(truePositives, falsePositives, falseNegatives));
-        System.out.println("Classification error: " + (1 - accuracy));
+        double precision = Metrics.precision(truePositives, falsePositives);
+        double recall = Metrics.sensitivity(truePositives, falseNegatives);
+        double specificity = Metrics.specificity(trueNegatives, falsePositives);
+        double f1Score = Metrics.f1Score(truePositives, falsePositives, falseNegatives);
+
+        return List.of(accuracy, precision, recall, specificity, f1Score, 1 - accuracy);
     }
 
     public void crossValidation(int numberOfFolds) {
