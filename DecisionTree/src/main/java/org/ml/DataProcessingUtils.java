@@ -1,7 +1,6 @@
 package org.ml;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -9,10 +8,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class DatasetReader {
+public class DataProcessingUtils {
     private final String filepath;
 
-    public DatasetReader(String filepath) {
+    public DataProcessingUtils(String filepath) {
         this.filepath = filepath;
     }
 
@@ -51,4 +50,23 @@ public class DatasetReader {
                 .map(listOfStrings -> listOfStrings.stream().map(Double::parseDouble).collect(Collectors.toList()))
                 .toList();
     }
+
+    public static Pair<List<List<Double>>, List<List<Double>>> splitData(
+            List<List<Double>> data, double trainingDataPercentage, double testingDataPercentage) {
+        int numberOfTuples = data.size();
+        int numberOfTrainingTuples = (int) Math.round((double)numberOfTuples * trainingDataPercentage);
+        int numberOfTestingTuples = (int) Math.round((double)numberOfTuples * testingDataPercentage);
+
+        List<List<Double>> trainingData = new ArrayList<>();
+        List<List<Double>> testingData = new ArrayList<>();
+
+        for (int index = 0; index < numberOfTrainingTuples; index++)
+            trainingData.add(data.get(index));
+
+        for (int index = numberOfTrainingTuples; index < numberOfTrainingTuples + numberOfTestingTuples; index++)
+            testingData.add(data.get(index));
+
+        return new Pair<>(trainingData, testingData);
+    }
+
 }

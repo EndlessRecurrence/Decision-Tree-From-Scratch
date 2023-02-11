@@ -1,48 +1,114 @@
 package org.ml;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toCollection;
 
 public class DecisionTreeClassifier {
-    private List<List<Double>> data;
+    private List<List<Double>> dataset;
     private List<String> features;
     private Node root;
-    private double minimumGiniCriterion;
-    private Integer minimumNumberOfSamples;
-    private Integer maximumDepth;
+    private final Integer minimumNumberOfSamples;
+    private final Integer maximumDepth;
 
-    public DecisionTreeClassifier(double minimumGiniCriterion, Integer minimumNumberOfSamples, Integer maximumDepth) {
-        this.minimumGiniCriterion = minimumGiniCriterion;
+    public DecisionTreeClassifier(Integer minimumNumberOfSamples, Integer maximumDepth) {
         this.minimumNumberOfSamples = minimumNumberOfSamples;
         this.maximumDepth = maximumDepth;
     }
 
     public void fit(List<List<Double>> data, List<String> features) {
-        this.data = data;
+        this.dataset = data;
         this.features = features;
-        this.root = this.createNode(data);
-        this.buildTree(this.root, 0);
-        System.out.println("Fit function finished!");
-        System.out.println(this.root.getFeatureIndex());
-        System.out.println(this.root.getValue());
-        System.out.println(this.root.getGiniValue());
+        this.root = this.createTree(data, 0);
+        System.out.println("Fit function finished! The root node is [" + this.features.get(this.root.getFeatureIndex()) + " < " + this.root.getValue() + "] with a Gini impurity of " + this.root.getGiniValue());
+        this.traverseTree(this.root, 0);
     }
 
-    private Node createNode(List<List<Double>> data) {
+    private Node createTree(List<List<Double>> data, int depth) {
         Node node = new Node();
+
         Pair<String, Pair<Double, Double>> feature = getRootFeature(data);
+
         node.setFeatureIndex(this.features.indexOf(feature.getFirst()));
         node.setGiniValue(feature.getSecond().getFirst());
         node.setValue(feature.getSecond().getSecond());
+        node.setData(data);
+        Pair<List<List<Double>>, List<List<Double>>> pair = this.getSplit(data, feature.getSecond().getSecond(), this.features.indexOf(feature.getFirst()));
+
+        if (data.size() < this.minimumNumberOfSamples || depth == this.maximumDepth) {
+            node.setLeaf(true);
+            return node;
+        }
+
+        node.setLeftNode(createTree(pair.getFirst(), depth + 1));
+        node.setRightNode(createTree(pair.getSecond(), depth + 1));
 
         return node;
     }
 
-    private void buildTree(Node root, int currentDepth) {
+    public void traverseTree(Node root, int depth) {
+        if (root.getLeaf()) {
+            System.out.println("[" + this.features.get(root.getFeatureIndex()) + " < " + root.getValue() + "]");
+            Integer positiveSamples = this.getNumberOfPositiveSamples(root.getData());
+            System.out.println("Positive: " + positiveSamples);
+            System.out.println("Negative: " + (root.getData().size() - positiveSamples));
+        } else {
+            System.out.println("[" + this.features.get(root.getFeatureIndex()) + " < " + root.getValue() + "]");
+        }
+
+        Node leftNode = root.getLeftNode();
+        Node rightNode = root.getRightNode();
+
+        if (leftNode != null)
+            traverseTree(root.getLeftNode(), depth + 1);
+
+        if (rightNode != null)
+            traverseTree(root.getRightNode(), depth + 1);
+    }
+
+    public boolean predict(List<Double> sample) {
+        Node current = this.root;
+
+        while (!current.getLeaf()) {
+            if (sample.get(current.getFeatureIndex()) < current.getValue()) {
+                current = current.getLeftNode();
+            } else {
+                current = current.getRightNode();
+            }
+        }
+
+        List<List<Double>> data = current.getData();
+        return this.getNumberOfPositiveSamples(data) >= this.getNumberOfNegativeSamples(data);
+    }
+
+    public void holdoutEvaluation(List<List<Double>> testingData) {
+        double trueNegatives = 0.0, truePositives = 0.0, falseNegatives = 0.0, falsePositives = 0.0;
+
+        for (List<Double> patient : testingData) {
+            int outcomeIndex = patient.size() - 1;
+            boolean result = this.predict(patient);
+
+            if (patient.get(outcomeIndex) == 1 && result) {
+                truePositives++;
+            } else if (patient.get(outcomeIndex) == 1 && !result) {
+                falseNegatives++;
+            } else if (patient.get(outcomeIndex) == 0 && result) {
+                falsePositives++;
+            } else {
+                trueNegatives++;
+            }
+        }
+
+        System.out.println("TP: " + truePositives);
+        System.out.println("TN: " + trueNegatives);
+        System.out.println("FP: " + falsePositives);
+        System.out.println("FN: " + falseNegatives);
+        System.out.println("Accuracy: " + Metrics.accuracy(truePositives, trueNegatives, falsePositives, falseNegatives));
+        System.out.println("Precision: " + Metrics.precision(truePositives, falsePositives));
+        System.out.println("Sensitivity/Recall/True Positive Rate: " + Metrics.sensitivity(truePositives, falseNegatives));
+        System.out.println("Specificity: " + Metrics.specificity(trueNegatives, falsePositives));
+        System.out.println("F1 score: " + Metrics.f1Score(truePositives, falsePositives, falseNegatives));
     }
 
     private Pair<String, Pair<Double, Double>> getRootFeature(List<List<Double>> data) {
@@ -52,7 +118,7 @@ public class DecisionTreeClassifier {
 
         for (int featureIndex = 0; featureIndex < features.size() - 1; featureIndex++) {
              int finalFeatureIndex = featureIndex;
-             mutableDataset.sort((firstList, secondList) -> firstList.get(finalFeatureIndex).compareTo(secondList.get(finalFeatureIndex)));
+             mutableDataset.sort(Comparator.comparing(firstList -> firstList.get(finalFeatureIndex)));
 
              Pair<Double, Double> giniImpurity = computeGiniImpurityForOneFeature(mutableDataset, featureIndex);
 
@@ -76,8 +142,7 @@ public class DecisionTreeClassifier {
         double minimumGiniImpurity = 1.0, splitValue = -1.0;
 
         for (Double midpoint : midpoints) {
-            double giniImpurity = computeGiniImpurityForTheSplitValue(midpoint, featureIndex);
-            System.out.println("Total gini impurity: " + giniImpurity);
+            double giniImpurity = computeGiniImpurityForTheSplitValue(data, midpoint, featureIndex);
             if (giniImpurity == -1)
                 continue;
 
@@ -87,20 +152,13 @@ public class DecisionTreeClassifier {
             }
         }
 
-        System.out.println("For feature no. " + featureIndex.toString() + " and split value " + splitValue + ", we have" +
-                "a Gini coefficient of " + minimumGiniImpurity);
-
         return new Pair<>(minimumGiniImpurity, splitValue);
     }
 
     private Double giniImpurity(Integer positiveSamples, Integer negativeSamples) {
         Double totalSamples = (double) (positiveSamples + negativeSamples);
         Double result = 1 - (positiveSamples/totalSamples) * (positiveSamples/totalSamples) - (negativeSamples/totalSamples) * (negativeSamples/totalSamples);
-        if (result.isNaN()) {
-            System.out.println(positiveSamples);
-            System.out.println(negativeSamples);
-            System.out.println(totalSamples);
-        }
+
         return result.isNaN() ? -1 : result;
     }
 
@@ -109,19 +167,25 @@ public class DecisionTreeClassifier {
         return ((double) firstLeafSamples / (double) totalSamples) * giniImpurityLeft + ((double) secondLeafSamples / (double) totalSamples) * giniImpurityRight;
     }
 
-    private Double computeGiniImpurityForTheSplitValue(Double midpoint, Integer featureIndex) {
-        List<List<Double>> leftSamples = this.data.stream()
-                .filter(values -> values.get(featureIndex) < midpoint)
+    private Pair<List<List<Double>>, List<List<Double>>> getSplit(List<List<Double>> data, double splitValue, Integer featureIndex) {
+        List<List<Double>> leftSamples = data.stream()
+                .filter(values -> values.get(featureIndex) < splitValue)
                 .toList();
 
-        List<List<Double>> rightSamples = this.data.stream()
-                .filter(values -> values.get(featureIndex) >= midpoint)
+        List<List<Double>> rightSamples = data.stream()
+                .filter(values -> values.get(featureIndex) >= splitValue)
                 .toList();
 
-        Integer leftPositiveSamples = this.getNumberOfPositiveSamples(leftSamples);
-        Integer leftNegativeSamples = this.getNumberOfNegativeSamples(leftSamples);
-        Integer rightPositiveSamples = this.getNumberOfPositiveSamples(rightSamples);
-        Integer rightNegativeSamples = this.getNumberOfNegativeSamples(rightSamples);
+        return new Pair<>(leftSamples, rightSamples);
+    }
+
+    private Double computeGiniImpurityForTheSplitValue(List<List<Double>> data, Double midpoint, Integer featureIndex) {
+        Pair<List<List<Double>>, List<List<Double>>> splitData = this.getSplit(data, midpoint, featureIndex);
+
+        Integer leftPositiveSamples = this.getNumberOfPositiveSamples(splitData.getFirst());
+        Integer leftNegativeSamples = this.getNumberOfNegativeSamples(splitData.getFirst());
+        Integer rightPositiveSamples = this.getNumberOfPositiveSamples(splitData.getSecond());
+        Integer rightNegativeSamples = this.getNumberOfNegativeSamples(splitData.getSecond());
 
         Double giniImpurityLeftLeaf = this.giniImpurity(leftPositiveSamples, leftNegativeSamples);
         Double giniImpurityRightLeaf = this.giniImpurity(rightPositiveSamples, rightNegativeSamples);

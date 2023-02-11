@@ -1,14 +1,19 @@
 package org.ml;
 
+import java.util.List;
+
 public class Node {
     private Double value;
+    private List<List<Double>> data;
     private Boolean isLeaf;
     private Node leftNode;
     private Node rightNode;
     private Double giniValue;
     private Integer featureIndex;
 
-    public Node() {}
+    public Node() {
+        this.isLeaf = false;
+    }
 
     public Node(Double value, Boolean isLeaf) {
         this.value = value;
@@ -61,5 +66,13 @@ public class Node {
 
     public void setFeatureIndex(Integer featureIndex) {
         this.featureIndex = featureIndex;
+    }
+
+    public List<List<Double>> getData() {
+        return data;
+    }
+
+    public void setData(List<List<Double>> data) {
+        this.data = data;
     }
 }
