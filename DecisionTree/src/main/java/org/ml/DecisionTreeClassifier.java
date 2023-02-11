@@ -104,11 +104,17 @@ public class DecisionTreeClassifier {
         System.out.println("TN: " + trueNegatives);
         System.out.println("FP: " + falsePositives);
         System.out.println("FN: " + falseNegatives);
-        System.out.println("Accuracy: " + Metrics.accuracy(truePositives, trueNegatives, falsePositives, falseNegatives));
+        double accuracy = Metrics.accuracy(truePositives, trueNegatives, falsePositives, falseNegatives);
+        System.out.println("Accuracy: " + accuracy);
         System.out.println("Precision: " + Metrics.precision(truePositives, falsePositives));
         System.out.println("Sensitivity/Recall/True Positive Rate: " + Metrics.sensitivity(truePositives, falseNegatives));
         System.out.println("Specificity: " + Metrics.specificity(trueNegatives, falsePositives));
         System.out.println("F1 score: " + Metrics.f1Score(truePositives, falsePositives, falseNegatives));
+        System.out.println("Classification error: " + (1 - accuracy));
+    }
+
+    public void crossValidation(int numberOfFolds) {
+
     }
 
     private Pair<String, Pair<Double, Double>> getRootFeature(List<List<Double>> data) {

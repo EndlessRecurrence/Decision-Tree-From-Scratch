@@ -69,4 +69,27 @@ public class DataProcessingUtils {
         return new Pair<>(trainingData, testingData);
     }
 
+    public static List<Pair<List<List<Double>>, List<List<Double>>>> splitDataForCrossValidation(List<List<Double>> data, int numberOfFolds) {
+        List<Pair<List<List<Double>>, List<List<Double>>>> result = new ArrayList<>();
+
+        int numberOfTestSamples = data.size() / numberOfFolds;
+        for (int sampleIndex = 0; sampleIndex < data.size() - numberOfTestSamples; sampleIndex += numberOfTestSamples) {
+            List<List<Double>> trainingData = new ArrayList<>();
+            List<List<Double>> testingData = new ArrayList<>();
+
+            for (int index = 0; index < sampleIndex; index++)
+                trainingData.add(data.get(index));
+
+            for (int index = sampleIndex; index < sampleIndex + numberOfTestSamples - 1; index++)
+                testingData.add(data.get(index));
+
+            for (int index = sampleIndex + numberOfTestSamples; index < data.size(); index++)
+                trainingData.add(data.get(index));
+
+            result.add(new Pair<>(trainingData, testingData));
+        }
+
+        return result;
+    }
+
 }

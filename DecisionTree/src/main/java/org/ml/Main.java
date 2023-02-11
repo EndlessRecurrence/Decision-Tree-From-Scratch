@@ -4,7 +4,6 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Working Directory = " + System.getProperty("user.dir"));
         DataProcessingUtils reader = new DataProcessingUtils("../datasets/pima-indians-diabetes.csv");
         List<String> features = reader.getFeatures();
         List<List<Double>> dataset = reader.getData();
@@ -13,10 +12,15 @@ public class Main {
             System.out.println(feature);
         }
 
-        Pair<List<List<Double>>, List<List<Double>>> dataSplit = DataProcessingUtils.splitData(dataset, 0.9, 0.1);
+        int numberOfFolds = 5;
+        List<Pair<List<List<Double>>, List<List<Double>>>> dataSplit = DataProcessingUtils.splitDataForCrossValidation(dataset, numberOfFolds);
 
-        DecisionTreeClassifier model = new DecisionTreeClassifier(10, 3);
-        model.fit(dataSplit.getFirst(), features);
-        model.holdoutEvaluation(dataSplit.getSecond());
+        for (int index = 0; index < numberOfFolds; index++) {
+            DecisionTreeClassifier model = new DecisionTreeClassifier(1, 2);
+            model.fit(dataSplit.get(index).getFirst(), features);
+            model.holdoutEvaluation(dataSplit.get(index).getSecond());
+        }
+
+        //model.holdoutEvaluation(dataSplit.getSecond());
     }
 }
