@@ -112,10 +112,6 @@ public class DecisionTreeClassifier {
         return List.of(accuracy, precision, recall, specificity, f1Score, 1 - accuracy);
     }
 
-    public void crossValidation(int numberOfFolds) {
-
-    }
-
     private Pair<String, Pair<Double, Double>> getRootFeature(List<List<Double>> data) {
         ArrayList<List<Double>> mutableDataset = new ArrayList<>(data);
         Pair<Double, Double> minimumGiniImpurityAndSplitValue = new Pair<>(1.0, 1.0);
